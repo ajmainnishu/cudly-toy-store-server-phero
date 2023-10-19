@@ -30,8 +30,25 @@ async function run() {
         // single toy
         app.get('/toy/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id: new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await toysCollection.findOne(query);
+            res.send(result);
+        })
+        // toys post
+        app.post('/toys', async (req, res) => {
+            const data = req.body
+            const doc = {
+                seller_name: data.sName,
+                seller_email: data.sEmail,
+                toy_name: data.tName,
+                toy_img: data.tPhoto,
+                price: data.price,
+                rating: data.rating,
+                quantity: data.quantity,
+                details: data.details,
+                category: data.category
+            }
+            const result = await toysCollection.insertOne(doc);
             res.send(result);
         })
         await client.db("admin").command({ ping: 1 });
