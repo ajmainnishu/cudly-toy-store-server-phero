@@ -7,8 +7,8 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-
-const uri = "mongodb+srv://<username>:<password>@cluster0.5ffrq.mongodb.net/?retryWrites=true&w=majority";
+// mongodb url link
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.5ffrq.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -22,6 +22,11 @@ async function run() {
     try {
         await client.connect();
         const toysCollection = client.db('usersDB').collection('toys');
+        // all toys
+        app.get('/toys', async (req, res) => {
+            const result = await toysCollection.find().toArray();
+            res.send(result);
+        })
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
