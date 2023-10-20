@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const app = express()
+const app = express();
+var jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const port = process.env.PORT || 5000;
@@ -18,10 +19,33 @@ const client = new MongoClient(uri, {
     }
 });
 
+// jwt email verify
+const verifyJWT = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: 'unauthorized access' });
+    }
+    const token = authorization.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+        if (error) {
+            return res.status(401).send({ error: true, message: 'unauthorized access' });
+        }
+        req.decoded = decoded;
+        next()
+    })
+}
+
 async function run() {
     try {
         await client.connect();
         const toysCollection = client.db('usersDB').collection('toys');
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '1h'
+            })
+            res.send({ token });
+        })
         // all toys
         app.get('/toys', async (req, res) => {
             const result = await toysCollection.find().toArray();
@@ -52,9 +76,15 @@ async function run() {
             res.send(result);
         })
         // user specific toys get
-        app.get('/toy', async (req, res) => {
-            const email = req.query.email;
-            const query = { seller_email: String(email) }
+        app.get('/toy', verifyJWT, async (req, res) => {
+            const decoded = req.decoded;
+            if (decoded.email !== req.query?.email) {
+                return res.status(401).send({ error: true, message: 'unauthorized access' });
+            }
+            let query = {};
+            if (req.query?.email) {
+                query = { seller_email: req.query.email }
+            }
             const result = await toysCollection.find(query).toArray();
             res.send(result);
         })
